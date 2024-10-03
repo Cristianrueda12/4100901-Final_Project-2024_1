@@ -287,7 +287,14 @@ void USART2_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
+	uint32_t isrflags   = READ_REG(USART3->ISR);
+	uint32_t cr1its     = READ_REG(USART3->CR1);
 
+	if (((isrflags & USART_ISR_RXNE) != 0U) && // Rx IT was detected, and
+		  ((cr1its & USART_CR1_RXNEIE) != 0U)) // Rx IT is enabled
+	{
+		HAL_UART_RxCpltCallback(&huart3);
+	}
 #if 0
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);

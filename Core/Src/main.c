@@ -42,6 +42,11 @@ uint8_t usart2_buffer[USART2_BUFFER_SIZE];
 ring_buffer_t usart2_rb;
 uint8_t usart2_rx;
 
+#define USART3_BUFFER_SIZE 10
+uint8_t usart3_buffer[USART3_BUFFER_SIZE];
+ring_buffer_t usart3_rb;
+uint8_t usart3_rx;
+
 #define MAX_PASSWORD_LENGTH 10
 char current_password[MAX_PASSWORD_LENGTH] = "12345";
 uint8_t changing_password = 0;
@@ -110,7 +115,7 @@ uint32_t last_debounce_time_left = 0;
 uint32_t last_debounce_time_right = 0,last_debounce_time_hazard = 0;
 uint32_t counter_right=0,counter_hazard=0;
 uint32_t last_debounce_time_parking=0,counter_parking=0,parking_toggle=0;
-
+uint8_t counter1=0;
 
 /* USER CODE END PV */
 
@@ -140,6 +145,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	  usart2_rx = USART2->RDR; // leyendo el byte recibido de USART2
 	  ring_buffer_write(&usart2_rb, usart2_rx);
 	  }
+  if (huart->Instance == USART3) {
+	  usart3_rx = USART3->RDR; // leyendo el byte recibido de USART2
+	  ring_buffer_write(&usart3_rb, usart3_rx);
+	  }
 
 	  // put the data received in buffer
 	  HAL_UART_Receive_IT(&huart2, &usart2_rx, 1); // enable interrupt to continue receiving
@@ -159,8 +168,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     if (authorized_access == 1) {
         handle_all_buttons(GPIO_Pin);
     }
+	if(authorized_access==1){
+		counter1=1;
 
+	}
     if (key_pressed != 0xFF) {
+
+
 
         // Resetear secuencia
         if (key_pressed == '*') {
@@ -580,6 +594,8 @@ int main(void)
 
   ring_buffer_init(&keyboard_ring_buffer, keyboard_buffer_memory, BUFFER_CAPACITY);
   ring_buffer_init(&usart2_rb, usart2_buffer, USART2_BUFFER_SIZE);
+  ring_buffer_init(&usart3_rb, usart3_buffer, USART3_BUFFER_SIZE);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -587,19 +603,58 @@ int main(void)
   printf("Starting...\r\n");
   //HAL_UART_Receive_IT(&huart2, &usart2_rx, 1); // enable interrupt for USART2 Rx
   ATOMIC_SET_BIT(USART2->CR1, USART_CR1_RXNEIE); // usando un funcion mas liviana para reducir memoria
+  ATOMIC_SET_BIT(USART3->CR1, USART_CR1_RXNEIE); // usando un funcion mas liviana para reducir memoria
   while (1) {
 
-	  const char my_id1[4] = "open";
+	  const char my_id1 = 'o';
 	  if(ring_buffer_is_empty(&usart2_rb)==0){
-		  validate_uart=validate_password(my_id1,&usart2_rb);
+		  validate_uart=validate_password2(&my_id1,&usart2_rb);
 		  if(validate_uart==1 ){
+			  if(counter1==0){
+
+			        ssd1306_Fill(Black);
+			        ssd1306_WriteString("Sistema", Font_6x8, White);
+			        ssd1306_SetCursor(0, 10);
+			        ssd1306_UpdateScreen();
+			        ssd1306_WriteString("desbloqeuado", Font_6x8, White);
+			        ssd1306_SetCursor(0, 30);
+			        ssd1306_UpdateScreen();
+			  }
 
 	          HAL_UART_Transmit(&huart2, "acceso permitido\n\r",18 , 10);
+	          authorized_access=1;
 
 		  }else if(validate_uart==0){
 	          HAL_UART_Transmit(&huart2, "acceso denegado\n\r",17 , 10);
 
 		  }
+
+		  ring_buffer_reset(&usart2_rb);
+	  }
+
+	  if(ring_buffer_is_empty(&usart3_rb)==0){
+		  validate_uart=validate_password2(&my_id1,&usart3_rb);
+		  if(validate_uart==1 ){
+			  if(counter1==0){
+
+			        ssd1306_Fill(Black);
+			        ssd1306_WriteString("Sistema", Font_6x8, White);
+			        ssd1306_SetCursor(0, 10);
+			        ssd1306_UpdateScreen();
+			        ssd1306_WriteString("desbloqeuado", Font_6x8, White);
+			        ssd1306_SetCursor(0, 30);
+			        ssd1306_UpdateScreen();
+			  }
+
+	          HAL_UART_Transmit(&huart2, "acceso permitido\n\r",18 , 10);
+	          authorized_access=1;
+
+		  }else if(validate_uart==0){
+	          HAL_UART_Transmit(&huart2, "acceso denegado\n\r",17 , 10);
+
+		  }
+
+		  ring_buffer_reset(&usart3_rb);
 	  }
 
 
