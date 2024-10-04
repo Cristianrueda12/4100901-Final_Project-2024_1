@@ -607,6 +607,7 @@ int main(void)
   while (1) {
 
 	  const char my_id1 = 'o';
+
 	  if(ring_buffer_is_empty(&usart2_rb)==0){
 		  validate_uart=validate_password2(&my_id1,&usart2_rb);
 		  if(validate_uart==1 ){
